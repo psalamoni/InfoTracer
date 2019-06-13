@@ -64,7 +64,7 @@ def makevals(ul,dr):
 		jpgs = pathmapping(folder,'*.jpg',False,True)
 		for i,jpg in jpgs:
 			print(jpg)
-			cropimage(folder,jpg,ul[1],ul[2],dr[1],dr[2],'croped_txt1_')
+			cropimage(folder,jpg,ul[0],ul[1],dr[0],dr[1],'croped_txt1_')
 			print('.')
 
 def GenerateReport(csv_data_import,new):
@@ -99,7 +99,7 @@ def GenerateDoc(source_pdfs,folder,jpg,pages,variable_match):
 
 	row_data_csv = [id_file,inputfile,pages]
 
-	for i in len(variable_match):
+	for i in range(len(variable_match)):
 		cropimage(folder, jpg, variable_match[i][1][0], variable_match[i][1][1], variable_match[i][2][0], variable_match[i][2][1],'id_'+str(i))
 
 		jpg_name = jpg[startnum+1:]
@@ -121,7 +121,7 @@ def GenerateDoc(source_pdfs,folder,jpg,pages,variable_match):
 		row_data_csv.append(doc_num)
 	GenerateReport(row_data_csv, False)
 
-def imageanalise(id_gen,source_pdfs,folders,txt1,pm,variable_match):
+def imageanalise(source_pdfs,folders,txt1,pm,variable_match):
 	from fuzzywuzzy import fuzz
 	from fuzzywuzzy import process
 	import os
@@ -135,7 +135,7 @@ def imageanalise(id_gen,source_pdfs,folders,txt1,pm,variable_match):
 	GenerateReport(csv_data_import, True)
 
 	# Verify subfolder in main folder
-	for i,folder in folders:
+	for i, folder in folders:
 		vals = pathmapping(folder,'croped/croped_txt1_*.jpg',False,True)
 		fdfd = list(vals)
 		
@@ -147,7 +147,8 @@ def imageanalise(id_gen,source_pdfs,folders,txt1,pm,variable_match):
 
 			tools = pyocr.get_available_tools()[0]
 			text_txt1 = tools.image_to_string(Image.open(val), builder=pyocr.builders.DigitBuilder())
-
+			print(text_txt1)
+			print(fuzz.token_set_ratio(txt1, text_txt1))
 			if fuzz.token_set_ratio(txt1, text_txt1) > pm:
 
 				GenerateDoc(source_pdfs,folder,jpg,numpage,variable_match)
@@ -204,16 +205,16 @@ def main():
 	elif (V=='C' or V=='c'):
 		# Make validation images for docs identifying
 		while True:
-			print('Type the x,y upper-left position of image detection')
+			print('Type the x,y upper-left position of image detection [e.g. 10,20]')
 			ul = input()
 			if re.match(r'\d+,\d+$',ul):
-				ul = [ul]
+				ul = list(map(int,ul.split(',')))
 				break
 		while True:
-			print('Type the x,y down-right position of image detection')
+			print('Type the x,y down-right position of image detection [e.g. 60,70]')
 			dr = input()
 			if re.match(r'\d+,\d+$',dr):
-				dr = [dr]
+				dr = list(map(int,dr.split(',')))
 				break
 		makevals(ul,dr)
 
@@ -225,13 +226,16 @@ def main():
 		while True:
 			print('Type the % of match [e.g. 70]')
 			pm = input()
-			if pm.isdigit() and pm<=100 and pm>=0:
-				break
+			if pm.isdigit():
+				pm = int(pm)
+				if pm<=100 and pm>=0:
+					break
 
 		while True: 
 			print('Type # of variables to be captured')
 			n_variables = input()
 			if n_variables.isdigit():
+				n_variables = int(n_variables)
 				break
 		
 		variable_match = []
@@ -244,13 +248,13 @@ def main():
 				print('Type the x,y upper-left position of variable')
 				ul = input()
 				if re.match(r'\d+,\d+$',ul):
-					ul = [ul]
+					ul = list(map(int,ul.split(',')))
 					break
 			while True:
 				print('Type the x,y down-right position of variable')
 				dr = input()
 				if re.match(r'\d+,\d+$',dr):
-					dr = [dr]
+					dr = list(map(int,dr.split(',')))
 					break
 					
 			print('Type the regex of the variable [e.g. for 02/2018 use \d+/\d+]')
@@ -262,15 +266,15 @@ def main():
 			reader = csv.reader(f, delimiter=',',quotechar='"', quoting=csv.QUOTE_MINIMAL)
 			source_pdfs = list(reader)
 
-		id_gen = 1
 
 		folders = pathmapping('docclass/','**/',True,False)
+		folders = list(folders)
 		with open('folder_list.csv', 'w') as csvfile:
 			filewriter = csv.writer(csvfile, delimiter=',',quotechar='"', quoting=csv.QUOTE_MINIMAL)
 			for nfolder, folder in folders:
 				filewriter.writerow([nfolder,folder])
 	
 		# Analise images looking for documents
-		imageanalise(id_gen, source_pdfs,folders,txt1,pm,variable_match)
+		imageanalise(source_pdfs,folders,txt1,pm,variable_match)
 
 main()
